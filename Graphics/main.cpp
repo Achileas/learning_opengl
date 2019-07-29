@@ -47,7 +47,7 @@ int main()
 
     // build and compile our shader program
     // ------------------------------------
-    Shader ourShader("vertex.s", "fragment.s"); // you can name your shader files however you like
+    Shader ourShader("Shaders/vertex.s", "Shaders/fragment.s"); // you can name your shader files however you like
 
     float vertices[] = {
         // positions        // colors
