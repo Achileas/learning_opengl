@@ -8,11 +8,13 @@
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window, unsigned int shaderID);
 
 // screen settings
 const unsigned int SCREEN_WIDTH = 1024;
 const unsigned int SCREEN_HEIGHT = 768;
+
+float textureMixingPercentage = 0.2;
 
 int main()
 {
@@ -78,10 +80,10 @@ int main()
         //1.0f, 0.0f,      // lower right corner
 
         // Texture Coordinates of Square
-        0.1f, 0.1f,        // bottom left corner
-        0.3f, 0.1f,        // bottom right corner
-        0.3f, 0.3f,        // top right corner
-        0.1f, 0.3f,        // top left corner
+        0.0f, 0.0f,        // bottom left corner
+        1.0f, 0.0f,        // bottom right corner
+        1.0f, 1.0f,        // top right corner
+        0.0f, 1.0f,        // top left corner
     };
 
     unsigned int VBO, VAO, EBO, textureVBO;
@@ -174,6 +176,7 @@ int main()
 
     ourShader.use();
     ourShader.setInt("texture2", 1);
+    ourShader.setFloat("mixPercentage", textureMixingPercentage);
 
     // uncomment this call to draw in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -184,7 +187,7 @@ int main()
     {
         // input
         // -----
-        processInput(window);
+        processInput(window, ourShader.ID);
 
         // render
         // ------
@@ -233,10 +236,26 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow* window)
+void processInput(GLFWwindow* window, unsigned int shaderID)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    {
+        textureMixingPercentage += 0.01;
+        glUniform1f(glGetUniformLocation(shaderID, "mixPercentage"), textureMixingPercentage);
+        std::cout << textureMixingPercentage + 0.1 << std::endl;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    {
+        textureMixingPercentage -= 0.01;
+        glUniform1f(glGetUniformLocation(shaderID, "mixPercentage"), textureMixingPercentage);
+        std::cout << textureMixingPercentage - 0.1 << std::endl;
+    }
+
+    std::cout << textureMixingPercentage << std::endl;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
