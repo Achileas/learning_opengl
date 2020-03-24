@@ -1,11 +1,16 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "shader.h"
-
 #include <stb_image.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "shader.h"
+
 #include <iostream>
+#include <Windows.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window, unsigned int shaderID);
@@ -26,7 +31,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // uncomment this statement to fix compilation on OS X
 #endif
 
     // glfw window creation
@@ -51,7 +56,7 @@ int main()
 
     // build and compile our shader program
     // ------------------------------------
-    Shader ourShader("Shaders/vertex.glsl", "Shaders/fragment.glsl"); // you can name your shader files however you like
+    Shader ourShader("Shaders/vertex.glsl", "Shaders/fragment.glsl");  // you can name your shader files however you like
 
     float vertices[] = {
         // positions          // colors           // textures
@@ -61,7 +66,7 @@ int main()
     };
 
     float verticesEBO[] = {
-        // positions        // colors
+        // positions          // colors
         0.7f, -0.7f, 0.0f,    0.0f, 1.0f, 0.0f,   // cube bottom right
         0.7f, 0.7f, 0.0f,     1.0f, 0.0f, 0.0f,   // cube top right
         -0.7f, 0.7f, 0.0f,    0.0f, 1.0f, 1.0f,   // cube top left
@@ -86,7 +91,7 @@ int main()
         0.0f, 1.0f,        // top left corner
     };
 
-    unsigned int VBO, VAO, EBO, textureVBO;
+    unsigned int VAO, VBO, EBO, textureVBO;
     
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -109,17 +114,13 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // configure color Vertex Attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
     // binding Vertex Buffer Object of Texture Coordiantes, then copy data from array to Vertex Buffer Object
     glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoords), textureCoords, GL_STATIC_DRAW);
 
     // configure texture Vertex Attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object
     // so afterwards we can safely unbind
@@ -137,13 +138,13 @@ int main()
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
     // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);           // set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);  // set texture wrapping to GL_REPEAT (default wrapping method)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // set texture filtering parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load and generate the texture
-    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
+    stbi_set_flip_vertically_on_load(true);  // tell stb_image.h to flip loaded texture's on the y-axis.
     data = stbi_load("Textures\\wall.jpg", &width, &height, &nrChannels, 0);
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -199,21 +200,25 @@ int main()
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
 
-        // draw our first triangle
-        ourShader.use();
+        // Initialize matrix
+        glm::mat4 transform = glm::mat4(1.0f);  // make sure to initialize matrix to identity matrix first
 
-        // horizontal offset for the triangle
-        //ourShader.setFloat("rightOffset", 0.5);
+        // Container 1
+        transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+        transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        // get matrix's uniform location and set matrix
+        unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
-        // update the uniform color
-        //float timeValue = glfwGetTime();
-        //float greenValue = sin(timeValue) / 2.0f + 0.5f;
-        //int vertexColorLocation = glGetUniformLocation(ourShader.ID, "ourColor");
-        //glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-        //ourShader.setFloat("green", greenValue);
+        glBindVertexArray(VAO);  // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-        glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
+        // Container 2
+        transform = glm::mat4(1.0f);
+        transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
+        float scaleAmount = sin(glfwGetTime());
+        transform = glm::scale(transform, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -245,17 +250,23 @@ void processInput(GLFWwindow* window, unsigned int shaderID)
     {
         textureMixingPercentage += 0.01;
         glUniform1f(glGetUniformLocation(shaderID, "mixPercentage"), textureMixingPercentage);
-        std::cout << textureMixingPercentage + 0.1 << std::endl;
     }
 
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
     {
         textureMixingPercentage -= 0.01;
         glUniform1f(glGetUniformLocation(shaderID, "mixPercentage"), textureMixingPercentage);
-        std::cout << textureMixingPercentage - 0.1 << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    {
+        textureMixingPercentage = 0.0;
+        glUniform1f(glGetUniformLocation(shaderID, "mixPercentage"), textureMixingPercentage);
     }
 
-    std::cout << textureMixingPercentage << std::endl;
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 06);
+    std::cout << "[" << "*" << "] ";
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 07);
+    std::cout << "Texture Mix Value " << textureMixingPercentage << std::endl;
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
