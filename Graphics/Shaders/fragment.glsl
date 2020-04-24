@@ -5,7 +5,6 @@ out vec4 FragmentColor;
 in vec3 ourColor;
 in vec2 TextureCoord;
 
-//uniform float green;
 uniform float mixPercentage;
 uniform sampler2D texture1;
 uniform sampler2D texture2;
